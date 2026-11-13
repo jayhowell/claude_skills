@@ -24,11 +24,12 @@ shared-system changes with you first.
 
 ## Requirements
 
-- AWS CLI v2 with credentials (admin or equivalent EC2/S3/SSM rights)
-- An EC2 key pair, with its private key on your machine
-- `jq`, `curl`, `kubectl`, `openssl`, `ssh` (OpenSSH >= 8.4)
-- For the Rancher import: a kubectl context pointing at the Rancher *local*
-  cluster
+AWS CLI **v2** (logged in with `aws login` or `aws sso login`), `kubectl`,
+`jq`, `curl`, `openssl` and OpenSSH **8.4+**, plus an EC2 key pair with its
+private key on your machine. For the Rancher import you also need a kubectl
+context for the Rancher local cluster. See the repository's top-level
+`README.md` for versions, install commands, AWS permissions and quotas.
+`00-preflight.sh` checks all of this before creating anything.
 
 ## Build
 

@@ -14,6 +14,61 @@ optionally be imported into **Rancher**.
 | Storage | One 350 GB gp3 volume per node; Longhorn, plus a `longhorn-rwx` StorageClass |
 | Build time | ~30-45 min, mostly waiting on the Harvester install |
 
+## Requirements
+
+### Tools on your machine
+
+| Tool | Version | Used for | Install |
+|---|---|---|---|
+| [Claude Code](https://docs.claude.com/en/docs/claude-code) | current | Running the skill (not needed if you run the scripts yourself) | see link |
+| [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) | **v2** | All AWS calls, and `aws login` / `aws sso login` | macOS: `brew install awscli` · Linux: AWS installer (see link) |
+| [kubectl](https://kubernetes.io/docs/tasks/tools/) | recent | Talking to Harvester; Rancher import | macOS: `brew install kubectl` · Linux: see link |
+| [jq](https://jqlang.github.io/jq/) | 1.6+ | Parsing AWS JSON, building the S3 bucket policy | `brew install jq` · `apt/dnf/zypper install jq` |
+| curl | any | Checking release files, your public IP, the Harvester UI | usually preinstalled |
+| OpenSSH (`ssh`, `ssh-keygen`) | **8.4+** | Node access; the password login to the live installer needs `SSH_ASKPASS_REQUIRE` | usually preinstalled (`ssh -V`) |
+| openssl | any | Generating the node password and cluster token | usually preinstalled |
+| bash | 3.2+ | The scripts (macOS's built-in bash works) | preinstalled |
+
+Check everything at once:
+
+```bash
+for t in aws kubectl jq curl ssh ssh-keygen openssl base64; do
+  command -v $t >/dev/null && echo "ok      $t" || echo "MISSING $t"; done
+aws --version     # must say aws-cli/2.x
+ssh -V            # must be OpenSSH_8.4 or newer
+```
+
+`00-preflight.sh` runs these checks too, and stops before creating anything.
+
+### AWS access
+
+1. **Log in with the AWS CLI.** Use whichever your account uses:
+   ```bash
+   aws login            # console-credential login (recent AWS CLI v2)
+   aws sso login        # IAM Identity Center (SSO) profiles
+   aws sts get-caller-identity    # confirm you're logged in
+   ```
+   Sessions expire, often after a few hours. If a script fails with
+   `session has expired`, log in again and re-run it; the scripts pick up
+   where they left off. Set `AWS_PROFILE` if you don't use the default
+   profile.
+2. **Permissions.** Admin, or rights to manage EC2 (instances, AMIs, volumes,
+   snapshots, security groups, network interfaces) and S3 buckets, plus read
+   access to SSM public parameters, Service Quotas and the Pricing API.
+3. **An EC2 key pair** in your target region, with its private key file on
+   your machine (e.g. `~/.ssh/my-key.pem`, mode `600`).
+4. **Room in your quotas:** 26 on-demand standard vCPUs for 3 ×
+   m8i-flex.2xlarge plus a temporary builder instance.
+
+### Optional: Rancher import
+
+- A kubectl context that points at your Rancher server's *local* cluster,
+  with admin rights. Check it with
+  `kubectl get settings.management.cattle.io server-version`.
+- The Harvester version must be supported by your Rancher version: Rancher
+  2.14 → Harvester v1.8.x, 2.15 → v1.9.x. See the
+  [SUSE support matrix](https://www.suse.com/suse-harvester/support-matrix/all-supported-versions/).
+
 ## Install the skill
 
 ```bash
