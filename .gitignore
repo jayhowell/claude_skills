@@ -1,0 +1,17 @@
+# Per-cluster config and state (passwords, tokens, kubeconfigs, instance IDs)
+cluster.env
+*.env
+!*.env.example
+state-*/
+*.kubeconfig
+secrets.env
+
+# Packaged copies of the skill
+*.tar.gz
+*.zip
+harvester-aws-flex (*)/
+
+# Editor / OS noise
+.DS_Store
+*.swp
+*~

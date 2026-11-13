@@ -1,0 +1,6 @@
+#!ipxe
+echo Harvester __HV__ PXE install for __NODE__
+set base https://releases.rancher.com/harvester/__HV__
+kernel ${base}/harvester-__HV__-vmlinuz-amd64 initrd=harvester-__HV__-initrd-amd64 ip=dhcp net.ifnames=1 rd.net.dhcp.retry=10 rd.cos.disable rd.noverifyssl console=tty1 console=ttyS0,115200n8 root=live:${base}/harvester-__HV__-rootfs-amd64.squashfs harvester.install.automatic=true harvester.install.skipchecks=true harvester.install.config_url=__CONFIG_URL__
+initrd ${base}/harvester-__HV__-initrd-amd64
+boot

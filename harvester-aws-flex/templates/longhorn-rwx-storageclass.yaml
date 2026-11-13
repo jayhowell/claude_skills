@@ -1,0 +1,21 @@
+# Harvester's built-in StorageClasses (harvester-longhorn, longhorn) set
+# migratable=true: their RWX is *block* RWX, used for VM live migration.
+# Mounting one as a filesystem from two pods fails with
+# "invalid controller count 2". This class omits migratable, so Longhorn
+# serves RWX volumes through a share-manager pod over NFSv4.1 instead.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-rwx
+  annotations:
+    field.cattle.io/description: "Longhorn RWX (NFS share-manager) on EBS - shared filesystems, not VM disks"
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "30"
+  dataLocality: disabled
+  fsType: ext4
+  nfsOptions: "vers=4.1,noresvport,timeo=600,retrans=5,softerr"

@@ -1,0 +1,27 @@
+scheme_version: 1
+@@SERVER_URL_LINE@@
+token: "@@TOKEN@@"
+os:
+  hostname: @@NODE@@
+  password: "@@PASSWORD@@"
+  ssh_authorized_keys:
+    - @@PUBKEY@@
+  ntp_servers:
+    - 169.254.169.123
+install:
+  mode: @@MODE@@
+  management_interface:
+    interfaces:
+      # Matched by MAC; the installer resolves the interface name.
+      - hwAddr: "@@MAC@@"
+    method: dhcp
+    # Explicit MTU: otherwise mgmt-br takes MTU 9001 from AWS DHCP while the
+    # NIC/bond stay at 1500, and node joins hang on TLS.
+    mtu: 1500
+  # By EBS volume ID so NVMe enumeration order can't pick the wrong disk.
+  device: /dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_@@VOLID@@
+  iso_url: https://releases.rancher.com/harvester/@@HV@@/harvester-@@HV@@-amd64.iso
+  tty: ttyS0,115200n8
+  skipchecks: true
+  vip: @@VIP@@
+  vip_mode: static

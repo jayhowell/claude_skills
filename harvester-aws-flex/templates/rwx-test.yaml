@@ -1,0 +1,33 @@
+# Two pods on different nodes write to one longhorn-rwx volume.
+# __NODE_A__ / __NODE_B__ are replaced by 06-verify-rwx.sh.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: haf-rwx-test, namespace: default}
+spec:
+  accessModes: [ReadWriteMany]
+  storageClassName: longhorn-rwx
+  resources: {requests: {storage: 1Gi}}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: haf-rwx-writer-a, namespace: default}
+spec:
+  nodeName: __NODE_A__
+  containers:
+  - name: c
+    image: registry.suse.com/bci/bci-busybox:latest
+    command: [sh, -c, "echo from-__NODE_A__ >> /data/shared.txt; sleep 3600"]
+    volumeMounts: [{name: v, mountPath: /data}]
+  volumes: [{name: v, persistentVolumeClaim: {claimName: haf-rwx-test}}]
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: haf-rwx-writer-b, namespace: default}
+spec:
+  nodeName: __NODE_B__
+  containers:
+  - name: c
+    image: registry.suse.com/bci/bci-busybox:latest
+    command: [sh, -c, "echo from-__NODE_B__ >> /data/shared.txt; sleep 3600"]
+    volumeMounts: [{name: v, mountPath: /data}]
+  volumes: [{name: v, persistentVolumeClaim: {claimName: haf-rwx-test}}]

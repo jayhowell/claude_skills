@@ -1,0 +1,41 @@
+#!/bin/bash
+# Runs once on a throwaway Amazon Linux 2023 instance. Writes an EFI System
+# Partition containing iPXE (UEFI) and an autoexec.ipxe that chains the EC2
+# user-data, onto the attached EBS volume __VOLUME_ID__, then powers off.
+# The result is snapshotted and registered as a boot-mode=uefi AMI.
+set -euo pipefail
+say() { echo "$*" | tee /dev/ttyS0 /dev/console >/dev/null 2>&1 || true; echo "$*"; }
+trap 'say "HAF-ESP-BUILD-FAILED line $LINENO"; sleep 5; poweroff' ERR
+
+VOL=__VOLUME_ID__
+LINK=/dev/disk/by-id/nvme-Amazon_Elastic_Block_Store_${VOL/-/}
+for _ in $(seq 1 120); do [ -e "$LINK" ] && break; sleep 5; done
+[ -e "$LINK" ] || { say "HAF-ESP-BUILD-FAILED volume $VOL never attached"; poweroff; }
+DEV=$(readlink -f "$LINK")
+say "HAF-ESP-BUILD building on $DEV"
+
+dnf -y -q install dosfstools gdisk
+sgdisk --zap-all "$DEV"
+sgdisk -n 1:2048:0 -t 1:ef00 -c 1:EFI "$DEV"
+partprobe "$DEV"; udevadm settle; sleep 2
+mkfs.vfat -F 32 -n IPXE "${DEV}p1"
+mount "${DEV}p1" /mnt
+mkdir -p /mnt/EFI/BOOT
+curl -fsSL "__IPXE_EFI_URL__" -o /mnt/EFI/BOOT/BOOTX64.EFI
+cat > /mnt/autoexec.ipxe <<'IPXE'
+#!ipxe
+echo harvester-aws-flex: iPXE (UEFI) - chaining EC2 user-data
+:retry
+dhcp || goto retry
+chain http://169.254.169.254/latest/user-data || goto failed
+:failed
+echo user-data chain failed, retrying in 10s
+sleep 10
+goto retry
+IPXE
+cp /mnt/autoexec.ipxe /mnt/EFI/BOOT/autoexec.ipxe
+SUM=$(sha256sum /mnt/EFI/BOOT/BOOTX64.EFI | cut -c1-16)
+umount /mnt; sync
+say "HAF-ESP-BUILD-OK ipxe_sha256=$SUM"
+sleep 5
+poweroff
